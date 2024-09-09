@@ -1,0 +1,12 @@
+# Ignore by default
+*
+
+# Exceptions:
+!.env
+!pyproject.toml
+!app.py
+!static
+!templates
+!instance
+!wsgi.py
+!poetry.lock

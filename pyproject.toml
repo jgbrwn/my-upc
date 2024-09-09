@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "my-upc"
+version = "0.1.0"
+description = ""
+authors = ["JB"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+flask = "^3.0.3"
+gunicorn = "^23.0.0"
+sqlalchemy = "^2.0.32"
+flask-sqlalchemy = "^3.1.1"
+typing-extensions = "^4.12.2"
+greenlet = "^3.0.3"
+python-barcode = {extras = ["images"], version = "^0.15.1"}
+beautifulsoup4 = "^4.12.3"
+requests = "^2.32.3"
+python-dotenv = "^1.0.1"
+pillow = "^10.4.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

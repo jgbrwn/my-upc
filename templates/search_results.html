@@ -1,0 +1,51 @@
+{% for result in results.items %}
+<tr>
+    <td>{{ result.media }}</td>
+    <td><a href="#" onclick="showBarcode('{{ result.upc }}', '{{ result.title|replace("'", "\\'") }}')">{{ result.upc }}</a></td>
+    <td>{{ result.title }}</td>
+    <td>{{ result.studio }}</td>
+    <td>{{ result.year }}</td>
+    <td>{{ result.genre }}</td>
+    <td>{{ result.rating }}</td>
+    <td>{{ result.notes }}</td>
+</tr>
+{% endfor %}
+
+{% if results.items %}
+    <tr>
+        <td colspan="8">
+            <nav class="pagination is-centered" role="navigation" aria-label="pagination">
+                {% if results.has_prev %}
+                    <a class="pagination-previous" onclick="loadPage({{ results.prev_num }})">&laquo; Previous</a>
+                {% else %}
+                    <a class="pagination-previous" disabled>&laquo; Previous</a>
+                {% endif %}
+                
+                {% if results.has_next %}
+                    <a class="pagination-next" onclick="loadPage({{ results.next_num }})">Next &raquo;</a>
+                {% else %}
+                    <a class="pagination-next" disabled>Next &raquo;</a>
+                {% endif %}
+                
+                <ul class="pagination-list">
+                    <li><span class="pagination-ellipsis">Page {{ results.page }} of {{ results.pages }}</span></li>
+                </ul>
+            </nav>
+        </td>
+    </tr>
+{% endif %}
+
+<script>
+function loadPage(page) {
+    const searchInput = document.querySelector('input[name="q"]');
+    const query = searchInput.value;
+    const url = `/search?q=${encodeURIComponent(query)}&page=${page}`;
+    
+    fetch(url)
+        .then(response => response.text())
+        .then(html => {
+            document.querySelector('#results').innerHTML = html;
+            history.pushState(null, '', '/#');
+        });
+}
+</script>

@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Security-Policy" content="frame-ancestors 'none'">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My-UPC Movie Search</title>
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500&display=swap">
+  <script src="https://unpkg.com/htmx.org@1.9.4"></script>
+  <script data-goatcounter="https://my-upc.goatcounter.com/count"
+          async src="//gc.zgo.at/count.js"></script>
+  <script defer src="https://cloud.umami.is/script.js" data-website-id="dc02c50b-336b-4d82-b262-cd537db2cd5d"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+  <style>
+    body {
+      background-color: #f0f2f5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .hero {
+      background-color: transparent;
+      color: #333;
+      padding: 1rem 0;
+      margin-bottom: 1rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero .container {
+      max-width: 960px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 2;
+    }
+    .hero-body {
+      padding: 1rem 0;
+    }
+    .hero-title {
+      text-align: center;
+      position: relative;
+    }
+    .hero-title a {
+      color: #2c3e50; /* Darker blue color */
+      text-decoration: none;
+      font-size: 2.5rem;
+      font-weight: 500;
+      text-shadow: 2px 2px 4px rgba(255,255,255,0.5); /* White text shadow */
+      background: rgba(255,255,255,0.7); /* Semi-transparent white background */
+      padding: 0.2em 0.5em;
+      border-radius: 8px;
+      transition: all 0.3s ease;
+      font-family: 'Barlow Condensed', sans-serif;
+    }
+    .hero-title a:hover {
+      color: #34495e; /* Slightly darker on hover */
+      text-shadow: 2px 2px 6px rgba(255,255,255,0.7);
+      background: rgba(255,255,255,0.8);
+      text-decoration: none;
+    }
+    .barcode-background {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      opacity: 0.5;
+      z-index: 1;
+      width: 100%;
+      max-width: 600px;
+    }
+    .search-container {
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .table-container {
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      padding: 1.5rem;
+    }
+    .table {
+      background-color: transparent;
+    }
+    .table th {
+      background-color: #f5f5f5;
+    }
+    .table tr:hover {
+      background-color: #f0f0f0;
+    }
+    .pagination {
+      justify-content: center;
+      margin-top: 1rem;
+    }
+    .pagination-ellipsis {
+      color: #333;
+      font-weight: bold;
+    }
+    #movieImage {
+      min-height: 300px;
+      transition: opacity 0.3s ease-in-out;
+    }
+    #movieImage.loading {
+      opacity: 0.5;
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0% { opacity: 0.5; }
+      50% { opacity: 0.75; }
+      100% { opacity: 0.5; }
+    }
+    .note {
+      font-size: 0.9em;
+      color: #666;
+      margin-top: 1rem;
+      line-height: 1.4;
+    }
+    #infoLink {
+      cursor: pointer;
+      color: #3273dc;
+      text-decoration: underline;
+    }
+    .movie-info-item {
+      padding: 10px 0;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    .movie-info-item:last-child {
+      border-bottom: none;
+    }
+    .movie-info-plot {
+      margin-bottom: 20px;
+    }
+    .button.is-light {
+      background-color: #f5f5f5;
+      color: #363636;
+    }
+    .button.is-light:hover {
+      background-color: #e8e8e8;
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <img src="{{ url_for('static', filename='barcode_background.png') }}" alt="Barcode Background" class="barcode-background">
+    <div class="hero-body">
+      <div class="container">
+        <h1 class="title hero-title">
+          <a href="/">My-UPC Movie Search</a>
+        </h1>
+      </div>
+    </div>
+  </header>
+
+  <main class="section">
+    <div class="container">
+      <div class="has-text-centered mb-4">
+        <div class="buttons is-centered">
+          <button class="button is-small is-light" onclick="clearResults(event)">
+            <span class="icon">
+              <i class="fas fa-times"></i>
+            </span>
+            <span>Clear results</span>
+          </button>
+          <button class="button is-small is-light" onclick="showAllTitles(event)">
+            <span class="icon">
+              <i class="fas fa-list"></i>
+            </span>
+            <span>ALL titles</span>
+          </button>
+        </div>
+      </div>
+      <div class="search-container">
+        <div class="field">
+          <div class="control">
+            <input type="text" id="searchInput" class="input is-medium" placeholder="Search for movies..." name="q" hx-get="/search" hx-trigger="keyup changed delay:500ms" hx-target="#results">
+          </div>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <table class="table is-fullwidth is-striped">
+          <thead>
+            <tr>
+              <th>Media Type</th>
+              <th>UPC</th>
+              <th>Title</th>
+              <th>Studio</th>
+              <th>Year</th>
+              <th>Genre</th>
+              <th>Rating</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody id="results">
+          </tbody>
+        </table>
+      </div>
+      
+      <p class="note">
+        <b>*NOTE* The closest match to the title for the movie poster is pulled. A small % of movies may not match the movie from the barcode. The barcode however, should still be associated to the movie data from the search results. TL;DR rely on the search data results, not the movie poster image for the associated barcode.</b>
+      </p>
+    </div>
+  </main>
+
+  <!-- Modified Barcode Modal -->
+  <div id="barcodeModal" class="modal">
+    <div class="modal-background" onclick="closeModal()"></div>
+    <div class="modal-content">
+      <div class="box">
+        <figure class="image">
+          <a id="movieImageLink">
+            <img id="movieImage" src="" alt="Movie Poster" style="max-height: 300px; width: auto; margin: 0 auto;">
+          </a>
+        </figure>
+        <p id="infoLink" class="has-text-centered mt-2" style="display: none;">
+          <a onclick="showMovieInfo()">
+          <img src="{{ url_for('static', filename='details.png') }}" alt="DETAILS" style="height: 24px; width: auto;">
+          </a>
+        </p>
+        <figure class="image mt-4">
+          <img id="barcodeImage" src="" alt="Barcode">
+        </figure>
+      </div>
+    </div>
+    <button class="modal-close is-large" aria-label="close" onclick="closeModal()"></button>
+  </div>
+
+  <!-- New Movie Info Modal -->
+  <div id="movieInfoModal" class="modal">
+    <div class="modal-background" onclick="closeMovieInfo()"></div>
+    <div class="modal-content">
+      <div class="box">
+        <div id="movieDetails"></div>
+      </div>
+    </div>
+    <button class="modal-close is-large" aria-label="close" onclick="closeMovieInfo()"></button>
+  </div>
+
+  <script>
+  let scrollPosition;
+  let movieData;
+
+  async function showBarcode(upc, title) {
+      scrollPosition = window.pageYOffset;
+      const barcodeUrl = '/barcode/' + upc;
+      const movieImageUrl = '/movie_image/' + encodeURIComponent(title.replace(/\//g, ' '));
+      
+      document.getElementById('barcodeImage').src = barcodeUrl;
+      
+      const movieImageElement = document.getElementById('movieImage');
+      const movieImageLink = document.getElementById('movieImageLink');
+      const infoLink = document.getElementById('infoLink');
+      
+      // Add loading effect
+      movieImageElement.classList.add('loading');
+      infoLink.style.display = 'none';
+      
+      try {
+          const movieImageResponse = await fetch(movieImageUrl);
+          if (!movieImageResponse.ok) {
+              throw new Error(`HTTP error! status: ${movieImageResponse.status}`);
+          }
+          const movieImageData = await movieImageResponse.json();
+
+          let imageUrl;
+          let imdbId = null;
+          if (movieImageData.error) {
+              console.error("Error fetching movie image:", movieImageData.error);
+              imageUrl = movieImageData.image_url || `/placeholder/${encodeURIComponent(title.substring(0, 100))}`;
+          } else if (movieImageData.image_url) {
+              imageUrl = movieImageData.image_url;
+              imdbId = movieImageData.imdb_id;
+              movieData = movieImageData.movie_data;  // Store the movie data
+          } else {
+              console.error("No image URL returned");
+              imageUrl = `/placeholder/${encodeURIComponent(title.substring(0, 100))}`;
+          }
+
+          await setMovieImage(imageUrl);
+          
+          // Set up the link for the movie image
+          if (imdbId) {
+              movieImageLink.href = `https://www.imdb.com/title/${imdbId}/`;
+              movieImageLink.target = "_blank";
+              movieImageLink.style.cursor = "pointer";
+              infoLink.style.display = 'block';
+          } else {
+              movieImageLink.removeAttribute("href");
+              movieImageLink.removeAttribute("target");
+              movieImageLink.style.cursor = "default";
+          }
+      } catch (error) {
+          console.error("Error in showBarcode:", error);
+          await setMovieImage(`/placeholder/${encodeURIComponent(title.substring(0, 100))}`);
+          movieImageLink.removeAttribute("href");
+          movieImageLink.removeAttribute("target");
+          movieImageLink.style.cursor = "default";
+      }
+
+      document.getElementById('barcodeModal').classList.add('is-active');
+  }
+
+  async function setMovieImage(src) {
+      return new Promise((resolve, reject) => {
+          const img = document.getElementById('movieImage');
+          img.onload = () => {
+              img.classList.remove('loading');
+              resolve();
+          };
+          img.onerror = reject;
+          img.src = src;
+      });
+  }
+
+  function showMovieInfo() {
+      if (movieData) {
+          const details = [
+              { label: "Year", value: movieData.Year },
+              { label: "Rated", value: movieData.Rated },
+              { label: "Released", value: movieData.Released },
+              { label: "Runtime", value: movieData.Runtime },
+              { label: "Genre", value: movieData.Genre },
+              { label: "Director", value: movieData.Director },
+              { label: "Actors", value: movieData.Actors },
+              { label: "Awards", value: movieData.Awards },
+              { label: "IMDb Rating", value: movieData.imdbRating },
+              { label: "Box Office", value: movieData.BoxOffice }
+          ];
+
+          let movieInfoHtml = `
+              <h2 id="movieTitle" class="title is-4">${movieData.Title}</h2>
+              <p class="movie-info-plot subtitle is-6 mb-4">${movieData.Plot}</p>
+          `;
+
+          const detailsHtml = details.map(detail => 
+              `<div class="movie-info-item">
+                  <strong>${detail.label}:</strong> ${detail.value || 'N/A'}
+              </div>`
+          ).join('');
+
+          movieInfoHtml += detailsHtml;
+
+          document.getElementById('movieDetails').innerHTML = movieInfoHtml;
+          document.getElementById('movieInfoModal').classList.add('is-active');
+      }
+  }
+
+  function closeMovieInfo() {
+      document.getElementById('movieInfoModal').classList.remove('is-active');
+  }
+
+  function closeModal() {
+      document.getElementById('barcodeModal').classList.remove('is-active');
+      window.scrollTo(0, scrollPosition);
+  }
+
+  // Close modal when clicking outside of it
+  document.addEventListener('click', function(event) {
+      const barcodeModal = document.getElementById('barcodeModal');
+      const movieInfoModal = document.getElementById('movieInfoModal');
+      if (event.target === barcodeModal) {
+          closeModal();
+      } else if (event.target === movieInfoModal) {
+          closeMovieInfo();
+      }
+  });
+
+  // Close modal when pressing the Escape key
+  document.addEventListener('keydown', function(event) {
+      if (event.key === 'Escape') {
+          if (document.getElementById('movieInfoModal').classList.contains('is-active')) {
+              closeMovieInfo();
+          } else {
+              closeModal();
+          }
+      }
+  });
+
+  function isMobileDevice() {
+    return (typeof window.orientation !== "undefined") || (navigator.userAgent.indexOf('IEMobile') !== -1);
+  }
+
+  function focusSearchInput() {
+    if (!isMobileDevice()) {
+      const searchInput = document.getElementById('searchInput');
+      if (searchInput) {
+        searchInput.focus();
+        // Scroll to the input field (helpful on desktop)
+        searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+  }
+
+  // Try to focus immediately (only on desktop)
+  focusSearchInput();
+
+  // Also try to focus after a short delay (only on desktop)
+  setTimeout(focusSearchInput, 100);
+
+  // Focus when the window gains focus (useful for desktop devices)
+  window.addEventListener('focus', focusSearchInput);
+
+  function clearResults(event) {
+    event.preventDefault();
+    document.getElementById('searchInput').value = '';
+    document.getElementById('results').innerHTML = '';
+    history.pushState(null, '', '/#');
+    
+    // Add a slight delay before focusing (only on desktop)
+    setTimeout(() => {
+      if (!isMobileDevice()) {
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+          searchInput.focus();
+        }
+      }
+    }, 100);
+  }
+
+  function showAllTitles(event) {
+    event.preventDefault();
+    document.getElementById('searchInput').value = '  ';
+    const url = '/search?q=%20%20';
+    fetch(url)
+      .then(response => response.text())
+      .then(html => {
+        document.getElementById('results').innerHTML = html;
+        history.pushState(null, '', '/#');
+      });
+  }
+  </script>
+
+</body>
+
+</html>

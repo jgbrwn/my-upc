@@ -201,7 +201,7 @@
       </div>
       
       <p class="note">
-        <b>*NOTE* The closest match to the title for the movie poster is pulled. A small % of movies may not match the movie from the barcode. The barcode however, should still be associated to the movie data from the search results. TL;DR rely on the search data results, not the movie poster image for the associated barcode.</b>
+        <b>*NOTE* The closest match to the title for the movie poster is pulled. A small % of movies may not match the movie from the barcode. The barcode however, should still be associated to the movie data from the search grid results. TL;DR rely on the search data results, not the movie poster image for the associated barcode.</b>
       </p>
     </div>
   </main>
@@ -423,14 +423,12 @@
 
   function showAllTitles(event) {
     event.preventDefault();
-    document.getElementById('searchInput').value = '  ';
-    const url = '/search?q=%20%20';
-    fetch(url)
-      .then(response => response.text())
-      .then(html => {
-        document.getElementById('results').innerHTML = html;
-        history.pushState(null, '', '/#');
-      });
+    const searchInput = document.getElementById('searchInput');
+    searchInput.value = '  '; // Set to two spaces
+    searchInput.setAttribute('hx-get', '/search'); // Set the HTMX get request
+    searchInput.setAttribute('hx-target', '#results'); // Specify the target for HTMX response
+    searchInput.setAttribute('hx-trigger', 'keyup changed delay:500ms'); // Reapply the trigger
+    searchInput.dispatchEvent(new Event('keyup')); // Trigger the HTMX request
   }
   </script>
 

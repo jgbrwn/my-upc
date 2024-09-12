@@ -17,7 +17,7 @@ primary_region = 'ewr'
   processes = ['app']
 
 [[http_service.checks]]
-  grace_period = "240s"
+  grace_period = "60s"
   interval = "30s"
   method = "GET"
   path = "/"

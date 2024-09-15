@@ -404,21 +404,26 @@
   // Focus when the window gains focus (useful for desktop devices)
   window.addEventListener('focus', focusSearchInput);
 
+  // this version breaks subsequent All titles button click functionality
+  //function clearResults(event) {
+  //  event.preventDefault();
+  //  document.getElementById('searchInput').value = '';
+  //  document.getElementById('results').innerHTML = '';
+  //  history.pushState(null, '', '/#');
+
+    // Focus on the search input after clearing
+    //setTimeout(() => {
+    //  document.getElementById('searchInput').focus();
+    //}, 100);
+
+    // Reapply the event listener for the "ALL titles" button
+    //attachShowAllTitlesListener();
+  //}
+
   function clearResults(event) {
     event.preventDefault();
-    document.getElementById('searchInput').value = '';
-    document.getElementById('results').innerHTML = '';
-    history.pushState(null, '', '/#');
-    
-    // Add a slight delay before focusing (only on desktop)
-    setTimeout(() => {
-      if (!isMobileDevice()) {
-        const searchInput = document.getElementById('searchInput');
-        if (searchInput) {
-          searchInput.focus();
-        }
-      }
-    }, 100);
+    // Reload the page to reset the state
+    window.location.href = '/'; // Redirect to the home page
   }
 
   function showAllTitles(event) {
@@ -430,6 +435,39 @@
     searchInput.setAttribute('hx-trigger', 'keyup changed delay:500ms'); // Reapply the trigger
     searchInput.dispatchEvent(new Event('keyup')); // Trigger the HTMX request
   }
+
+  function attachShowAllTitlesListener() {
+    const showAllTitlesBtn = document.getElementById('showAllTitlesBtn');
+    showAllTitlesBtn.removeEventListener('click', showAllTitles); // Remove any existing listener
+    showAllTitlesBtn.addEventListener('click', showAllTitles); // Attach the new listener
+  }
+
+  // Initial attachment of the event listener
+  attachShowAllTitlesListener();
+
+  function isMobileDevice() {
+    return (typeof window.orientation !== "undefined") || (navigator.userAgent.indexOf('IEMobile') !== -1);
+  }
+
+  // Focus search input on load
+  function focusSearchInput() {
+    if (!isMobileDevice()) {
+      const searchInput = document.getElementById('searchInput');
+      if (searchInput) {
+        searchInput.focus();
+        searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+  }
+
+  // Try to focus immediately (only on desktop)
+  focusSearchInput();
+
+  // Also try to focus after a short delay (only on desktop)
+  setTimeout(focusSearchInput, 100);
+
+  // Focus when the window gains focus (useful for desktop devices)
+  window.addEventListener('focus', focusSearchInput);
   </script>
 
 </body>

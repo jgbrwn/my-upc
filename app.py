@@ -1,6 +1,9 @@
-from flask import Flask, request, render_template, Blueprint, send_file, make_response, jsonify, abort, url_for
+from flask import (
+    Flask, request, render_template, Blueprint, send_file, 
+    make_response, jsonify, abort, url_for
+)
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import and_, or_, not_
+from sqlalchemy import and_, or_, not_, create_engine, text
 import requests
 from urllib.parse import quote_plus, unquote
 import json
@@ -12,30 +15,100 @@ import logging
 import textwrap
 import barcode
 from barcode.writer import ImageWriter
-# Disabling rate limiting as will be putting behind CF
-#from flask_limiter import Limiter
-#from flask_limiter.util import get_remote_address
+import pandas as pd
+import threading
+import schedule
+import time
+import re
 
-# Set up logging // commented for deployment
-# logging.basicConfig(level=logging.DEBUG)
+# Define the Google Sheet URL variable
+GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/1po70GCN9JUwrWgycMueNfxpEvBjLd7DQkiMRUQFFsL8/export?format=csv&gid=0"
+
+# Define the SQLite database engine
+engine = create_engine('sqlite:///instance/db.masterlist.sqlite3')
+
+# Read the Google Sheet into a Pandas DataFrame
+def read_google_sheet():
+    try:
+        df = pd.read_csv(GOOGLE_SHEET_URL)
+        return df
+    except Exception as e:
+        print(f"Error reading Google Sheet: {e}")
+        return None
+
+# Update the SQLite database with any new data from gsheet dataframe
+def update_sqlite_database(df):
+    if df is not None:
+        try:
+            # Count rows before update
+            with engine.connect() as conn:
+                result = conn.execute(text("SELECT COUNT(*) FROM movie"))
+                row_count_before = result.scalar()
+
+            # Update the database
+            df.to_sql('movie', engine, if_exists='replace', index=False)
+
+            # Count rows after update
+            with engine.connect() as conn:
+                result = conn.execute(text("SELECT COUNT(*) FROM movie"))
+                row_count_after = result.scalar()
+
+            rows_updated = row_count_after - row_count_before
+            print(f"Database updated successfully. Total rows updated: {rows_updated}")
+        except Exception as e:
+            print(f"Error updating database: {e}")
+        finally:
+            del df
+    else:
+        print("No DataFrame to update the database.")
+
+DB_LOCK_FILE = "/tmp/update_database.lock"
+
+# Function to read Google Sheet and update the SQLite database
+def update_database():
+    if os.path.exists(DB_LOCK_FILE):
+        print("Database update already in progress. Skipping.")
+        return
+    
+    try:
+        with open(DB_LOCK_FILE, "w") as lock:
+            lock.write(str(os.getpid()))
+        df = read_google_sheet()
+        update_sqlite_database(df)
+        # logging.basicConfig(level=logging.DEBUG)
+    
+    finally:
+        if os.path.exists(DB_LOCK_FILE):
+            os.remove(DB_LOCK_FILE)
+
+# Function to run the update_database function at 08:00 system time (which would be 04:00 ET)
+def schedule_updates():
+    schedule.every().day.at("08:00").do(update_database)
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
+
+# Start the scheduler in a separate thread
+scheduler_thread = threading.Thread(target=schedule_updates)
+scheduler_thread.daemon = True
+scheduler_thread.start()
+
+# Initial update at application startup
+update_database()
 
 # Load environment variables
 load_dotenv()
 
-#limiter = Limiter(key_func=get_remote_address, default_limits=["100 per minute"])
-
 db = SQLAlchemy()
 
 class Movie(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    media = db.Column(db.String(10), nullable=False)
-    upc = db.Column(db.String(12), nullable=False)
-    title = db.Column(db.String(125), nullable=False)
-    studio = db.Column(db.String(30), nullable=False)
-    year = db.Column(db.Integer, nullable=False)
-    genre = db.Column(db.String(30), nullable=False)
-    rating = db.Column(db.String(6), nullable=False)
-    notes = db.Column(db.String(30), nullable=False)
+    ID = db.Column(db.Integer, primary_key=True)
+    TITLE = db.Column(db.String(125), nullable=False)
+    UPC = db.Column(db.String(125), nullable=False)
+    QUALITY = db.Column(db.String(10), nullable=False)
+    YEAR = db.Column(db.Integer, nullable=False)
+    MA = db.Column(db.String(10), nullable=False)
+    NOTES = db.Column(db.String(60), nullable=False)
 
 main = Blueprint("main", __name__)
 
@@ -52,16 +125,10 @@ def check_referrer():
         abort(403)
 
 @main.route("/")
-#@limiter.limit("100 per minute")
 def index():
-    #this might be causing issues with Cloudflare proxy
-    #user_agent = request.headers.get('User-Agent')
-    #if not user_agent or 'Mozilla' not in user_agent:
-    #    abort(403)  # Forbidden
     return render_template("index.html")
 
 @main.route("/search")
-#@limiter.limit("100 per minute")
 def search():
     check_referrer()
     q = request.args.get("q")
@@ -75,35 +142,42 @@ def search():
 
         # Handle UPC search separately
         if len(q) == 12 and q.isdigit():
-            conditions.append(Movie.upc == q)
+            conditions.append(Movie.UPC == q)
         else:
             # Split the search query into individual words for non-UPC searches
             search_terms = q.lower().split()
             for term in search_terms:
                 term_condition = or_(
-                    Movie.media.icontains(term),
-                    Movie.title.icontains(term),
-                    Movie.studio.icontains(term),
-                    Movie.year.icontains(term),
-                    Movie.genre.icontains(term),
-                    Movie.rating.icontains(term),
+                    Movie.QUALITY.icontains(term),
+                    Movie.TITLE.icontains(term),
+                    Movie.YEAR.icontains(term),
                     and_(
-                        Movie.notes.icontains(term),
-                        not_(Movie.notes.icontains("blu")),
-                        not_(Movie.notes.icontains("dvd"))
+                        Movie.NOTES.icontains(term),
+                        not_(Movie.NOTES.icontains("blu")),
+                        not_(Movie.NOTES.icontains("dvd"))
                     )
                 )
                 conditions.append(term_condition)
 
         # Combine all conditions with AND
-        results = Movie.query.filter(and_(*conditions)).order_by(Movie.title.asc(), Movie.year.desc()).paginate(page=page, per_page=per_page, error_out=False)
+        results = (Movie.query
+           .filter(and_(*conditions))
+           .order_by(Movie.TITLE.asc(), Movie.YEAR.desc())
+           .with_entities(
+               Movie.TITLE.label('title'),
+               Movie.UPC.label('upc'),
+               Movie.QUALITY.label('quality'),
+               Movie.YEAR.label('year'),
+               Movie.MA.label('ma'),
+               Movie.NOTES.label('notes')
+           )
+           .paginate(page=page, per_page=per_page, error_out=False))
     else:
         results = []
 
     return render_template("search_results.html", results=results)
 
 @main.route("/barcode/<upc>")
-#@limiter.limit("60 per minute")
 def generate_barcode(upc):
     check_referrer()
     try:
@@ -180,7 +254,6 @@ def placeholder(text):
         return "Error generating placeholder", 500
 
 @main.route("/movie_image/<title>")
-#@limiter.limit("20 per minute; 1600 per hour")
 def get_movie_image(title):
     check_referrer()
     #logging.debug(f"get_movie_image called with title: {title}")
@@ -271,9 +344,12 @@ def create_app():
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///db.masterlist.sqlite3"
 
     db.init_app(app)
-    # Will put behind CF instead of onbox rate-limiting
-    #limiter.init_app(app)  # Initialize limiter with the app
 
     app.register_blueprint(main)
+
+    # For search_results.html to be able to use regex to filter for 12 digit upc's in the upc column data
+    @app.template_filter('regex_findall')
+    def regex_findall_filter(s, pattern):
+        return re.findall(pattern, s)
 
     return app

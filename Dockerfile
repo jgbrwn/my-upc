@@ -13,4 +13,4 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y fonts-dejavu
 COPY --from=builder /app/.venv .venv/
 COPY . .
-CMD ["/app/.venv/bin/gunicorn", "--bind", "[::]:8080", "--workers", "4", "--threads", "1", "--worker-class", "gthread", "wsgi:app"]
+CMD ["/app/.venv/bin/gunicorn", "--bind", "[::]:8080", "--workers", "4", "--threads", "2", "--worker-class", "gthread", "wsgi:app"]

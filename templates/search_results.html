@@ -1,12 +1,30 @@
 {% for result in results.items %}
 <tr>
-    <td>{{ result.media }}</td>
-    <td><a href="#" onclick="showBarcode('{{ result.upc }}', '{{ result.title|replace("'", "\\'") }}')">{{ result.upc }}</a></td>
     <td>{{ result.title }}</td>
-    <td>{{ result.studio }}</td>
+    <td>
+        {% set upc_data = result.upc %}
+        {% set upc_groups = upc_data | regex_findall('\[(.*?)\]') %}
+        {% for group in upc_groups %}
+            {% set group_parts = group.split(';') %}
+            {% if group_parts|length > 1 %}
+                [{{ group_parts[0] }};
+                {% set upcs = group_parts[1].split(',') %}
+                {% for upc in upcs %}
+                    {% set trimmed_upc = upc.strip() %}
+                    {% if trimmed_upc|length == 12 and trimmed_upc.isdigit() %}
+                        <a href="#" onclick="showBarcode('{{ trimmed_upc }}', '{{ result.title|replace("'", "\\'") }}')">{{ trimmed_upc }}</a>{% if not loop.last %},{% endif %}
+                    {% else %}
+                        {{ trimmed_upc }}{% if not loop.last %},{% endif %}
+                    {% endif %}
+                {% endfor %}]{% if not loop.last %} {% endif %}
+            {% else %}
+                [{{ group }}]{% if not loop.last %} {% endif %}
+            {% endif %}
+        {% endfor %}
+    </td>
+    <td>{{ result.quality }}</td>
     <td>{{ result.year }}</td>
-    <td>{{ result.genre }}</td>
-    <td>{{ result.rating }}</td>
+    <td>{{ result.ma }}</td>
     <td>{{ result.notes }}</td>
 </tr>
 {% endfor %}

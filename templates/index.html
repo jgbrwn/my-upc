@@ -141,6 +141,33 @@
     .button.is-light:hover {
       background-color: #e8e8e8;
     }
+    .footer {
+    background-color: #f8f9fa;
+    padding: 20px 0;
+    margin-top: 30px;
+    border-top: 1px solid #e9ecef;
+    }
+    .footer-content {
+    max-width: 800px;
+    margin: 0 auto;
+    text-align: center;
+    }
+    .footer-note {
+    font-size: 0.9em;
+    color: #6c757d;
+    margin-bottom: 15px;
+    }
+    .footer-links {
+    margin-top: 15px;
+    }
+    .footer-links a {
+    color: #007bff;
+    text-decoration: none;
+    margin: 0 10px;
+    }
+    .footer-links a:hover {
+    text-decoration: underline;
+    }
   </style>
 </head>
 <body>
@@ -185,13 +212,11 @@
         <table class="table is-fullwidth is-striped">
           <thead>
             <tr>
-              <th>Media Type</th>
-              <th>UPC</th>
               <th>Title</th>
-              <th>Studio</th>
+              <th>UPC</th>
+              <th>Max Quality</th>
               <th>Year</th>
-              <th>Genre</th>
-              <th>Rating</th>
+              <th>MA</th>
               <th>Notes</th>
             </tr>
           </thead>
@@ -199,10 +224,24 @@
           </tbody>
         </table>
       </div>
-      
-      <p class="note">
-        <b>*NOTE* The closest match to the title for the movie poster is pulled. A small % of movies may not match the movie from the barcode. The barcode however, should still be associated to the movie data from the search grid results. TL;DR rely on the search data results, not the movie poster image for the associated barcode.</b>
-      </p>
+    <footer class="footer">
+      <div class="footer-content">
+        <p class="footer-note">
+          <strong>Note:</strong> The closest match to the title for the movie poster is pulled.
+          A small percentage of movies may not match the movie from the barcode.
+          The barcode, however, should still be associated with the movie data from the search grid results.
+          <br><br>
+          <em>TL;DR: Rely on the search data results, not the movie poster image for the associated barcode.</em>
+        </p>
+        <div class="footer-links">
+          <a href="https://github.com/jgbrwn/my-upc" target="_blank">Source code</a>
+          <span>|</span>
+          <a href="https://digitalupc.net" target="_blank">Data Source: DigitalUPC.net</a>
+          <span>|</span>
+          <a href="https://fly.io" target="_blank">Hosted by Fly.io</a>
+        </div>
+      </div>
+    </footer>
     </div>
   </main>
 
@@ -403,22 +442,6 @@
 
   // Focus when the window gains focus (useful for desktop devices)
   window.addEventListener('focus', focusSearchInput);
-
-  // this version breaks subsequent All titles button click functionality
-  //function clearResults(event) {
-  //  event.preventDefault();
-  //  document.getElementById('searchInput').value = '';
-  //  document.getElementById('results').innerHTML = '';
-  //  history.pushState(null, '', '/#');
-
-    // Focus on the search input after clearing
-    //setTimeout(() => {
-    //  document.getElementById('searchInput').focus();
-    //}, 100);
-
-    // Reapply the event listener for the "ALL titles" button
-    //attachShowAllTitlesListener();
-  //}
 
   function clearResults(event) {
     event.preventDefault();

@@ -194,7 +194,7 @@ def generate_barcode(upc):
         barcode_response = make_response(send_file(buffer, mimetype='image/png'))
         
         # Set cache control headers
-        barcode_response.headers['Cache-Control'] = 'public, max-age=31536000'  # Cache for 1 year
+        barcode_response.headers['Cache-Control'] = 'public, max-age=2592000'  # Cache for 30 days
         barcode_response.headers['ETag'] = upc  # Use UPC as ETag
         
         return barcode_response
@@ -247,7 +247,7 @@ def placeholder(text):
         img_buffer = generate_placeholder(text[:100])  # Limit text length
         img_buffer.seek(0)
         placeholder_response = make_response(send_file(img_buffer, mimetype='image/png'))
-        placeholder_response.headers['Cache-Control'] = 'public, max-age=1209600'  # Cache for 14 days
+        placeholder_response.headers['Cache-Control'] = 'public, max-age=86400'  # Cache for 24 hours
         return placeholder_response
     except Exception as e:
         logging.error(f"Error in placeholder: {str(e)}")
@@ -257,6 +257,7 @@ def placeholder(text):
 def get_movie_image(title):
     check_referrer()
     #logging.debug(f"get_movie_image called with title: {title}")
+    year = request.args.get('year')
     try:
         # Your existing OMDB API logic here
         api_key = os.getenv('OMDB_API_KEY')
@@ -264,15 +265,18 @@ def get_movie_image(title):
             raise ValueError("OMDB API key not found in environment variables")
 
         # Extract year if present in the title
-        year = None
         if '(' in title and ')' in title:
-            year = title.split('(')[-1].split(')')[0]
-            if year.isdigit() and len(year) == 4:
+            year_in_title = title.split('(')[-1].split(')')[0]
+            if year_in_title.isdigit() and len(year_in_title) == 4:
+                year = int(year_in_title)
                 simplified_title = title.split('(')[0].strip()
             else:
-                year = None
+                if year:
+                    year = int(year)
                 simplified_title = title
         else:
+            if year:
+                year = int(year)
             simplified_title = title
 
         encoded_title = quote_plus(simplified_title)
@@ -285,44 +289,56 @@ def get_movie_image(title):
         search_data = search_response.json()
         
         print(f"Search response: {json.dumps(search_data, indent=2)}")
-        
-        if search_data.get('Response') == 'True' and search_data.get('Search'):
-            # Find the best match considering the year if provided
-            best_match = None
-            for movie in search_data['Search']:
-                if year and movie['Year'] == year:
-                    best_match = movie
-                    break
-                elif not year and movie['Title'].lower() == simplified_title.lower():
-                    best_match = movie
-                    break
-            
-            if not best_match:
-                best_match = search_data['Search'][0]  # Default to first result if no exact match
 
-            imdb_id = best_match['imdbID']
-            
-            # Now get the full movie details using the IMDb ID
-            movie_url = f"http://www.omdbapi.com/?i={imdb_id}&apikey={api_key}"
-            movie_response = requests.get(movie_url)
-            movie_data = movie_response.json()
-            
-            print(f"Movie data: {json.dumps(movie_data, indent=2)}")
-            
-            poster_url = movie_data.get('Poster', '')
-            if poster_url and poster_url != 'N/A':
-                print(f"Found poster URL: {poster_url}")
-                poster_response = make_response(jsonify({
-                    "image_url": poster_url,
-                    "imdb_id": imdb_id,
-                    "movie_data": movie_data  # Include full movie data in the response
-                }))
-                poster_response.headers['Cache-Control'] = 'public, max-age=7776000'  # Cache for 90 days
-                return poster_response
+        if search_data.get('Response') == 'True' and search_data.get('Search'):
+            # Implement a scoring system
+            best_match = None
+            best_score = -1
+            for movie in search_data['Search']:
+                score = 0
+                # Title similarity (case-insensitive)
+                if movie['Title'].lower() == simplified_title.lower():
+                    score += 3
+                elif simplified_title.lower() in movie['Title'].lower():
+                    score += 1
+
+                # Year matching
+                if year:
+                    movie_year = int(movie['Year'].split('–')[0])  # Handle series with year ranges
+                    if movie_year == int(year):
+                        score += 2
+                    elif abs(movie_year - int(year)) <= 1:  # Allow 1 year difference
+                        score += 1
+
+                if score > best_score:
+                    best_score = score
+                    best_match = movie
+
+            if best_match:
+                imdb_id = best_match['imdbID']
+
+                # Now get the full movie details using the IMDb ID
+                movie_url = f"http://www.omdbapi.com/?i={imdb_id}&apikey={api_key}"
+                movie_response = requests.get(movie_url)
+                movie_data = movie_response.json()
+
+                print(f"Best match: {best_match['Title']} ({best_match['Year']}) with score {best_score}")
+                print(f"Movie data: {json.dumps(movie_data, indent=2)}")
+
+                poster_url = movie_data.get('Poster', '')
+                if poster_url and poster_url != 'N/A':
+                    print(f"Found poster URL: {poster_url}")
+                    poster_response = make_response(jsonify({
+                        "image_url": poster_url,
+                        "imdb_id": imdb_id,
+                        "movie_data": movie_data  # Include full movie data in the response
+                    }))
+                    poster_response.headers['Cache-Control'] = 'public, max-age=86400'  # Cache for 24 hours
+                    return poster_response
+                else:
+                    print("No poster URL found or poster not available")
             else:
-                print("No poster URL found or poster not available")
-        else:
-            print(f"No results found for '{simplified_title}'")
+                print(f"No suitable match found for '{simplified_title}'")
             if 'Error' in search_data:
                 print(f"API Error: {search_data['Error']}")
         
@@ -351,5 +367,9 @@ def create_app():
     @app.template_filter('regex_findall')
     def regex_findall_filter(s, pattern):
         return re.findall(pattern, s)
+
+    @app.template_filter('regex_replace')
+    def regex_replace(s, find, replace):
+        return re.sub(find, replace, s)
 
     return app

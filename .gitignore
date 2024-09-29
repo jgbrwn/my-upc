@@ -2,6 +2,7 @@
 my_upc/__pycache__/
 builddb/
 
+.idea/
 .venv/
 .env
 

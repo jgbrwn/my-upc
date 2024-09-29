@@ -168,6 +168,9 @@
     .footer-links a:hover {
     text-decoration: underline;
     }
+    .large-emoji {
+      font-size: 2em; /* Adjust the size as needed */
+    }
   </style>
 </head>
 <body>
@@ -198,6 +201,11 @@
             </span>
             <span>ALL titles</span>
           </button>
+          <a class="button is-small is-light" href="https://docs.google.com/spreadsheets/d/1po70GCN9JUwrWgycMueNfxpEvBjLd7DQkiMRUQFFsL8/export?format=pdf&gid=0">
+            <span class="icon" style="font-size: 24px;">
+              <i class="fas fa-file-pdf"></i>
+            </span>
+          </a>
         </div>
       </div>
       <div class="search-container">
@@ -234,11 +242,11 @@
           <em>TL;DR: Rely on the search data results, not the movie poster image for the associated barcode.</em>
         </p>
         <div class="footer-links">
-          <a href="https://github.com/jgbrwn/my-upc" target="_blank">Source code</a>
+          <a href="https://github.com/jgbrwn/my-upc" target="_blank"><img src="{{ url_for('static', filename='gh.png') }}" alt="GH Logo" style="height: 32px; vertical-align: sub;">Source code</a>
           <span>|</span>
-          <a href="https://digitalupc.net" target="_blank">Data Source: DigitalUPC.net</a>
+          <a href="https://digitalupc.net" target="_blank">Data Source  <span class="large-emoji">&#x1F64F;</span>  DigitalUPC.net</a>
           <span>|</span>
-          <a href="https://fly.io" target="_blank">Hosted by Fly.io</a>
+          <a href="https://fly.io" target="_blank">Hosted by <img src="{{ url_for('static', filename='flyio.svg') }}" alt="Fly.io Logo" style="height: 32px; vertical-align: sub;"> Fly.io</a>
         </div>
       </div>
     </footer>
@@ -283,10 +291,10 @@
   let scrollPosition;
   let movieData;
 
-  async function showBarcode(upc, title) {
+  async function showBarcode(upc, title, year) {
       scrollPosition = window.pageYOffset;
       const barcodeUrl = '/barcode/' + upc;
-      const movieImageUrl = '/movie_image/' + encodeURIComponent(title.replace(/\//g, ' '));
+      const movieImageUrl = '/movie_image/' + encodeURIComponent(title.replace(/\//g, ' ')) + '?year=' + encodeURIComponent(year);
       
       document.getElementById('barcodeImage').src = barcodeUrl;
       

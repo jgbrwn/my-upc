@@ -1,27 +1,29 @@
 {% for result in results.items %}
 <tr>
     <td>{{ result.title }}</td>
-    <td>
-        {% set upc_data = result.upc %}
-        {% set upc_groups = upc_data | regex_findall('\[(.*?)\]') %}
-        {% for group in upc_groups %}
-            {% set group_parts = group.split(';') %}
-            {% if group_parts|length > 1 %}
-                [{{ group_parts[0] }};
-                {% set upcs = group_parts[1].split(',') %}
-                {% for upc in upcs %}
-                    {% set trimmed_upc = upc.strip() %}
-                    {% if trimmed_upc|length == 12 and trimmed_upc.isdigit() %}
-                        <a href="#" onclick="showBarcode('{{ trimmed_upc }}', '{{ result.title|replace("'", "\\'") }}')">{{ trimmed_upc }}</a>{% if not loop.last %},{% endif %}
-                    {% else %}
-                        {{ trimmed_upc }}{% if not loop.last %},{% endif %}
-                    {% endif %}
-                {% endfor %}]{% if not loop.last %} {% endif %}
-            {% else %}
-                [{{ group }}]{% if not loop.last %} {% endif %}
-            {% endif %}
-        {% endfor %}
-    </td>
+<td>
+  {% set upc_data = result.upc %}
+  {% set upc_groups = upc_data | regex_findall('\[(.*?)\]|\[(.*?)$|(\S+)') %}
+  {% for group in upc_groups %}
+    {% set group_content = group[0] or group[1] or group[2] %}
+    {% set group_parts = group_content.split(';') %}
+    {% if group_parts|length > 1 %}
+      [{{ group_parts[0] }};
+      {% set upcs = group_parts[1].split(',') %}
+      {% for upc in upcs %}
+        {% set trimmed_upc = upc.strip() %}
+        {% if trimmed_upc|length == 12 and trimmed_upc.isdigit() %}
+          <a href="#" onclick="showBarcode('{{ trimmed_upc }}', '{{ result.title|replace("'", "\\'") }}', '{{ result.year }}')">{{ trimmed_upc }}</a>{% if not loop.last %},{% endif %}
+        {% else %}
+          {{ trimmed_upc }}{% if not loop.last %},{% endif %}
+        {% endif %}
+      {% endfor %}
+      ]{% if not loop.last %} {% endif %}
+    {% else %}
+      {{ group_content }}{% if not loop.last %} {% endif %}
+    {% endif %}
+  {% endfor %}
+</td>
     <td>{{ result.quality }}</td>
     <td>{{ result.year }}</td>
     <td>{{ result.ma }}</td>
@@ -29,6 +31,7 @@
 </tr>
 {% endfor %}
 
+<!-- Pagination code remains the same -->
 {% if results.items %}
     <tr>
         <td colspan="8">

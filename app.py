@@ -107,7 +107,6 @@ class Movie(db.Model):
     UPC = db.Column(db.String(125), nullable=False)
     QUALITY = db.Column(db.String(10), nullable=False)
     YEAR = db.Column(db.Integer, nullable=False)
-    MA = db.Column(db.String(10), nullable=False)
     NOTES = db.Column(db.String(60), nullable=False)
 
 main = Blueprint("main", __name__)
@@ -168,7 +167,6 @@ def search():
                Movie.UPC.label('upc'),
                Movie.QUALITY.label('quality'),
                Movie.YEAR.label('year'),
-               Movie.MA.label('ma'),
                Movie.NOTES.label('notes')
            )
            .paginate(page=page, per_page=per_page, error_out=False))

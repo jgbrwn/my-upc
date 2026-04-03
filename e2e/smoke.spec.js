@@ -3,9 +3,10 @@ const { test, expect } = require('@playwright/test');
 test('search for "money" returns results on my-upc.com', async ({ page }) => {
   await page.goto('https://my-upc.com');
 
-  // Type into the search input — HTMX fires after 500ms keyup delay
+  // Type character-by-character so HTMX keyup events fire
   const searchInput = page.locator('#searchInput');
-  await searchInput.fill('money');
+  await searchInput.click();
+  await searchInput.pressSequentially('money', { delay: 100 });
 
   // Wait for HTMX to populate #results with at least one table row
   const firstResult = page.locator('#results tr').first();

@@ -6,7 +6,7 @@ authors = ["JB"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "3.11.13"
+python = "^3.11"
 flask = "3.0.3"
 gunicorn = "23.0.0"
 sqlalchemy = "2.0.32"

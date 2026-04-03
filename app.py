@@ -107,7 +107,6 @@ class Movie(db.Model):
     UPC = db.Column(db.String(125), nullable=False)
     QUALITY = db.Column(db.String(10), nullable=False)
     YEAR = db.Column(db.Integer, nullable=False)
-    NOTES = db.Column(db.String(60), nullable=False)
 
 main = Blueprint("main", __name__)
 
@@ -149,12 +148,7 @@ def search():
                 term_condition = or_(
                     Movie.QUALITY.icontains(term),
                     Movie.TITLE.icontains(term),
-                    Movie.YEAR.icontains(term),
-                    and_(
-                        Movie.NOTES.icontains(term),
-                        not_(Movie.NOTES.icontains("blu")),
-                        not_(Movie.NOTES.icontains("dvd"))
-                    )
+                    Movie.YEAR.icontains(term)
                 )
                 conditions.append(term_condition)
 
@@ -166,8 +160,7 @@ def search():
                Movie.TITLE.label('title'),
                Movie.UPC.label('upc'),
                Movie.QUALITY.label('quality'),
-               Movie.YEAR.label('year'),
-               Movie.NOTES.label('notes')
+               Movie.YEAR.label('year')
            )
            .paginate(page=page, per_page=per_page, error_out=False))
     else:

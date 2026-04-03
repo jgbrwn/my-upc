@@ -5,6 +5,9 @@ on:
     - cron: '0 13 * * *'  # 9am ET daily
   workflow_dispatch:       # allow manual trigger
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   smoke-test:
     runs-on: ubuntu-latest

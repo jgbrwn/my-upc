@@ -88,10 +88,28 @@ def schedule_updates():
         schedule.run_pending()
         time.sleep(1)
 
-# Start the scheduler in a separate thread
-scheduler_thread = threading.Thread(target=schedule_updates)
-scheduler_thread.daemon = True
-scheduler_thread.start()
+SCHEDULER_LOCK_FILE = "/tmp/scheduler.lock"
+
+def _scheduler_lock_is_stale():
+    """Return True if the lock file exists but its PID is no longer running."""
+    try:
+        with open(SCHEDULER_LOCK_FILE) as f:
+            pid = int(f.read().strip())
+        os.kill(pid, 0)  # Raises OSError if process is gone
+        return False
+    except (OSError, ValueError):
+        return True
+
+# Start the scheduler in only one worker — whichever wins the PID-file race.
+if not os.path.exists(SCHEDULER_LOCK_FILE) or _scheduler_lock_is_stale():
+    try:
+        with open(SCHEDULER_LOCK_FILE, 'x') as f:
+            f.write(str(os.getpid()))
+        scheduler_thread = threading.Thread(target=schedule_updates)
+        scheduler_thread.daemon = True
+        scheduler_thread.start()
+    except FileExistsError:
+        pass  # Another worker got there first
 
 # Initial update at application startup
 update_database()

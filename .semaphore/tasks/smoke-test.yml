@@ -1,0 +1,50 @@
+version: v1.0
+name: Daily Smoke Test (Playwright)
+
+# Machine/agent selection
+agent:
+  machine:
+    type: e1-standard-2
+    os_image: ubuntu2204
+
+execution_time_limit: 30m
+
+blocks:
+  - name: Install & run Playwright smoke test
+    task:
+      jobs:
+        - name: Playwright smoke
+          commands:
+            - checkout
+            - echo "Installing Node 20"
+            # Install Node 20 (Nodesource) and basic build tools
+            - curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+            - sudo apt-get update && sudo apt-get install -y nodejs build-essential
+
+            - echo "Install Playwright and dependencies"
+            - npm init -y
+            - npm install @playwright/test --no-audit --no-fund
+            - npx playwright install --with-deps chromium
+
+            - echo "Run smoke test"
+            # Run the single smoke spec. Capture artifacts on failure.
+            - |
+              set -o pipefail
+              if ! npx playwright test e2e/smoke.spec.js; then
+                echo "Smoke test failed — collecting Playwright report and artifacts"
+                mkdir -p artifacts/playwright-report
+                cp -R playwright-report artifacts/playwright-report 2>/dev/null || true
+                cp -R test-results artifacts/test-results 2>/dev/null || true
+                exit 1
+              fi
+
+      epilogue:
+        always:
+          # Upload artifacts directory if it exists
+          - test -d artifacts && semaphore artifact create artifacts || echo "No artifacts to upload"
+
+schedules:
+  # Run daily at 13:00 UTC (matches original cron: '0 13 * * *')
+  - cron: '0 13 * * *'
+    branch: main
+    pipeline_file: .semaphore/tasks/smoke-test.yml

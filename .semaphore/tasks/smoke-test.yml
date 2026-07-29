@@ -1,11 +1,7 @@
 version: v1.0
 name: Daily Smoke Test (Playwright)
 
-# Machine/agent selection
-agent:
-  machine:
-    type: e1-standard-2
-    os_image: ubuntu2204
+# This pipeline relies on the machine selected in Semaphore's UI, so no agent/machine block is declared here.
 
 execution_time_limit:
   minutes: 30
@@ -45,5 +41,4 @@ blocks:
           commands:
             - test -d artifacts && semaphore artifact create artifacts || echo "No artifacts to upload"
 
-# Scheduling can be managed in Semaphore's UI or via a separate schedule definition, so this pipeline file
-# does not declare a schedule. If you prefer an in-file schedule, add a `schedules:` section.
+# Scheduling can be managed in Semaphore's UI or via a separate schedule resource; no in-file schedule is declared here.

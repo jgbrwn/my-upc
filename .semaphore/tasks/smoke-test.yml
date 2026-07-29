@@ -1,7 +1,12 @@
 version: v1.0
 name: Daily Smoke Test (Playwright)
 
-# This pipeline relies on the machine selected in Semaphore's UI, so no agent/machine block is declared here.
+# Provide an agent block so the pipeline validates. If you selected a machine in the Semaphore UI,
+# the UI setting will take precedence at runtime; keeping this block satisfies the schema.
+agent:
+  machine:
+    type: e1-standard-2
+    os_image: ubuntu2204
 
 execution_time_limit:
   minutes: 30

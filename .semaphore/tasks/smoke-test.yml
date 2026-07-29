@@ -19,14 +19,28 @@ blocks:
             - checkout
             - echo "Node 20 is preinstalled on Semaphore Linux images; skipping Node installation"
 
-            - echo "Install Playwright and dependencies"
+            - echo "Install Playwright and dependencies (with caching when possible)"
             - |
-              # If package.json exists, use npm ci (if lockfile) or npm install. If no package.json, create one and install @playwright/test.
+              # Strategy:
+              # - If package.json exists: prefer npm ci (if lockfile) or npm install.
+              # - Use Semaphore cache keyed by checksum(package-lock.json) or checksum(package.json) when present.
+              # - If no package.json, create a minimal one and install @playwright/test (transient install).
+
               if [ -f package.json ]; then
                 if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
+                  CACHE_KEY=node-modules-$(checksum package-lock.json)
+                  echo "Restoring cache: $CACHE_KEY"
+                  cache restore $CACHE_KEY || true
                   npm ci --no-audit --no-fund
+                  echo "Storing cache: $CACHE_KEY"
+                  cache store $CACHE_KEY node_modules || true
                 else
+                  CACHE_KEY=node-modules-$(checksum package.json)
+                  echo "Restoring cache: $CACHE_KEY"
+                  cache restore $CACHE_KEY || true
                   npm install --no-audit --no-fund
+                  echo "Storing cache: $CACHE_KEY"
+                  cache store $CACHE_KEY node_modules || true
                 fi
               else
                 echo "No package.json found — creating minimal package.json and installing @playwright/test"
@@ -36,11 +50,11 @@ blocks:
 
             - npx playwright install --with-deps chromium
 
-            - echo "Run smoke test"
+            - echo "Run smoke test (generate HTML report)"
             # Run the single smoke spec. Capture artifacts on failure.
             - |
               set -o pipefail
-              if ! npx playwright test e2e/smoke.spec.js; then
+              if ! npx playwright test e2e/smoke.spec.js --reporter=html; then
                 echo "Smoke test failed — collecting Playwright report and artifacts"
                 mkdir -p artifacts/playwright-report
                 cp -R playwright-report artifacts/playwright-report 2>/dev/null || true

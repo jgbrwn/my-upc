@@ -16,14 +16,15 @@ blocks:
         - name: Playwright smoke
           commands:
             - checkout
-            - echo "Installing Node 20"
-            # Install Node 20 (Nodesource) and basic build tools
-            - curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-            - sudo apt-get update && sudo apt-get install -y nodejs build-essential
+            - echo "Node 20 is preinstalled on Semaphore Linux images; skipping Node installation"
 
             - echo "Install Playwright and dependencies"
-            - npm init -y
-            - npm install @playwright/test --no-audit --no-fund
+            - |
+              if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
+                npm ci --no-audit --no-fund
+              else
+                npm install --no-audit --no-fund
+              fi
             - npx playwright install --with-deps chromium
 
             - echo "Run smoke test"
@@ -43,8 +44,5 @@ blocks:
           # Upload artifacts directory if it exists
           - test -d artifacts && semaphore artifact create artifacts || echo "No artifacts to upload"
 
-schedules:
-  # Run daily at 13:00 UTC (matches original cron: '0 13 * * *')
-  - cron: '0 13 * * *'
-    branch: main
-    pipeline_file: .semaphore/tasks/smoke-test.yml
+# Scheduling can be managed in Semaphore's UI or via a separate schedule definition, so this pipeline file
+# does not declare a schedule. If you prefer an in-file schedule, add a `schedules:` section.

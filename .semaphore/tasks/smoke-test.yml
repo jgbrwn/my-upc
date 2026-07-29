@@ -3,10 +3,11 @@ name: Daily Smoke Test (Playwright)
 
 # Provide an agent block so the pipeline validates. If you selected a machine in the Semaphore UI,
 # the UI setting will take precedence at runtime; keeping this block satisfies the schema.
+# Updated to use f1-standard-2 and ubuntu2404 per request.
 agent:
   machine:
-    type: e1-standard-2
-    os_image: ubuntu2204
+    type: f1-standard-2
+    os_image: ubuntu2404
 
 execution_time_limit:
   minutes: 30

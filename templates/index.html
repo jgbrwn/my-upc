@@ -34,6 +34,7 @@
       margin: 0 auto;
       position: relative;
       z-index: 2;
+      text-align: center;
     }
     .hero-body {
       padding: 1rem 0;
@@ -58,6 +59,31 @@
       color: #34495e; /* Slightly darker on hover */
       text-shadow: 2px 2px 6px rgba(255,255,255,0.7);
       background: rgba(255,255,255,0.8);
+      text-decoration: none;
+    }
+    .v2-promotion {
+      display: inline-block;
+      width: auto;
+      max-width: calc(100% - 2rem);
+      box-sizing: border-box;
+      margin: 0.35rem auto 0;
+      padding: 0.65rem 1rem;
+      border: 2px solid #2a9d8f;
+      border-radius: 5px;
+      background-color: #f2fbfa;
+      color: #176b63;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 500;
+      line-height: 1.25;
+      text-align: center;
+      transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    }
+    .v2-promotion:hover,
+    .v2-promotion:focus {
+      border-color: #176b63;
+      background-color: #e1f5f2;
+      color: #0f4f49;
       text-decoration: none;
     }
     .barcode-background {
@@ -181,6 +207,9 @@
         <h1 class="title hero-title">
           <a href="/">My-UPC Movie Search</a>
         </h1>
+        <a class="v2-promotion" href="https://v2.my-upc.com" target="_blank" rel="noopener noreferrer">
+          Try the new v2 site! - v2.my-upc.com
+        </a>
       </div>
     </div>
   </header>
